@@ -84,8 +84,15 @@ mod tests {{
 
 fn extract_slug(input: &str) -> String {
     // 从 URL 提取 slug，或直接使用输入作为 slug
-    if input.contains("codewars.com") {
-        input.split('/').last().unwrap_or(input).to_string()
+    // 支持格式:
+    //   - 57eae20f5500ad98e50002c5
+    //   - https://www.codewars.com/kata/57eae20f5500ad98e50002c5
+    //   - https://www.codewars.com/kata/57eae20f5500ad98e50002c5/train/rust
+    //   - https://www.codewars.com/kata/some-kata-name/solutions/rust
+    if let Some(kata_pos) = input.find("/kata/") {
+        let after_kata = &input[kata_pos + 6..];
+        // 取 /kata/ 后的第一段路径
+        after_kata.split('/').next().unwrap_or(after_kata).to_string()
     } else {
         input.to_string()
     }
