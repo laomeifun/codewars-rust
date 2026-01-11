@@ -36,6 +36,7 @@ fn main() {
     let name = extract_json_field(&json_str, "name").unwrap_or_else(|| "unknown".to_string());
     let slug_from_api = extract_json_field(&json_str, "slug").unwrap_or_else(|| slug.clone());
     let rank = extract_rank(&json_str).unwrap_or(8);
+    let description = extract_description(&json_str).unwrap_or_default();
     let url = format!("https://www.codewars.com/kata/{}", slug_from_api);
 
     // 生成文件名
@@ -51,8 +52,12 @@ fn main() {
     let filename = format!("src/bin/{}_kyu{}_{}.rs", today, rank, safe_name);
 
     // 生成文件内容
+    let desc_comments = format_description(&description);
     let content = format!(r#"// Codewars Kata: {}
 // {}
+// Difficulty: {} kyu
+//
+{}
 
 fn solution() {{
     todo!()
@@ -71,7 +76,7 @@ mod tests {{
         // todo: 添加测试
     }}
 }}
-"#, name, url);
+"#, name, url, rank, desc_comments);
 
     // 写入文件
     let mut file = fs::File::create(&filename).expect("无法创建文件");
@@ -129,4 +134,48 @@ fn get_today() -> String {
         .output()
         .expect("无法获取日期");
     String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+fn extract_description(json: &str) -> Option<String> {
+    // 提取 "description":"..." 字段，处理转义字符
+    let pattern = "\"description\":\"";
+    if let Some(start) = json.find(pattern) {
+        let rest = &json[start + pattern.len()..];
+        let mut result = String::new();
+        let mut chars = rest.chars().peekable();
+        while let Some(c) = chars.next() {
+            match c {
+                '\\' => {
+                    if let Some(&next) = chars.peek() {
+                        chars.next();
+                        match next {
+                            'n' => result.push('\n'),
+                            'r' => result.push('\r'),
+                            't' => result.push('\t'),
+                            '"' => result.push('"'),
+                            '\\' => result.push('\\'),
+                            _ => {
+                                result.push('\\');
+                                result.push(next);
+                            }
+                        }
+                    }
+                }
+                '"' => break,
+                _ => result.push(c),
+            }
+        }
+        if !result.is_empty() {
+            return Some(result);
+        }
+    }
+    None
+}
+
+fn format_description(desc: &str) -> String {
+    // 将描述转换为注释格式，每行加 // 前缀
+    desc.lines()
+        .map(|line| format!("// {}", line))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
