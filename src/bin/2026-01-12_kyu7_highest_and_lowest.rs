@@ -15,7 +15,13 @@
 // - 输出字符串必须是两个数字，用单个空格分隔，最高值在前
 
 fn high_and_low(numbers: &str) -> String {
-    todo!()
+    let nums: Vec<i32> = numbers
+        .split_whitespace()
+        .map(|s| s.parse::<i32>().unwrap())
+        .collect();
+    let max = nums.iter().max().unwrap();
+    let min = nums.iter().min().unwrap();
+    format!("{} {}", max, min)
 }
 
 fn main() {
